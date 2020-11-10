@@ -1,0 +1,1 @@
+{"data":{"java":"return RaspiCam.jpeg(time);","import":"import java.io.*;\nimport org.json.*;\nimport com.newbound.robot.*;\n","returntype":"File","groups":"camera","params":[{"name":"time","type":"Long"}],"desc":""},"readers":["camera"],"id":"tvnmqv175ae60a084oae","sessionid":"jvgvwg16b7a4d277bt3","time":1604948853337,"addr":"/0:0:0:0:0:0:0:1:54798","username":"admin"}

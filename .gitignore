@@ -1,0 +1,31 @@
+# Newbound files
+bin/
+generated/
+
+# for mixed in Java files
+*.class
+
+# library version files
+data/botmanager/
+data/metabot/
+data/peerbot/
+data/securitybot/
+data/threejs/
+
+# runtime data and local properties
+runtime/botmanager/
+runtime/metabot/
+runtime/peerbot/
+runtime/securitybot/
+runtime/securitybot/
+data/runtime
+converted
+tmp/mime
+
+# IntelliJ
+out/
+# PyCharm project
+.idea/
+
+# Mac ignores
+.DS_Store
