@@ -17,10 +17,11 @@ runtime/botmanager/
 runtime/metabot/
 runtime/peerbot/
 runtime/securitybot/
-runtime/securitybot/
 data/runtime
 converted
 tmp/mime
+runtime/raspberrypi/log/
+runtime/raspberrypi/botd.properties
 
 # IntelliJ
 out/
