@@ -1,7 +1,7 @@
 # newbound_raspberrypi
 A collection of useful Newbound Metabot controls for working with the Raspberry Pi and Pi-compatible computers.
 
-#Dependencies
+# Dependencies
 This project requires an up-to-date working installation of the Newbound software
 https://github.com/mraiser/newbound
 
