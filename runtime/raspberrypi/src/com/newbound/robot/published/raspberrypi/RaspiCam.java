@@ -889,9 +889,12 @@ public class RaspiCam
 
     public static JSONObject timelapse(Long start, Long stop, Long interval, int fps) throws Exception {
         String name = start+"_"+stop+"_"+interval+"_"+fps;
-        File p = getGenerated(start, "timelapse").getParentFile();
-        File txt = new File(p, name+".txt");
-        File mp4 = new File(p, name+".mp4");
+//        File p = getGenerated(start, "timelapse").getParentFile();
+//        File txt = new File(p, name+".txt");
+//        File mp4 = new File(p, name+".mp4");
+        File txt = BotBase.newTempFile();
+        File mp4 = BotBase.getTempFile(txt.getName()+".mp4");
+        mp4.deleteOnExit();
         FileWriter fw = new FileWriter(txt);
         long when = start;
         while (when < stop)
@@ -917,7 +920,8 @@ public class RaspiCam
 
         JSONObject jo = new JSONObject();
         jo.put("status", "ok");
-        jo.put("msg", mp4.getCanonicalPath().substring(HTM.getCanonicalPath().length()));
+        jo.put("msg", mp4.getName());
+        jo.put("len", mp4.length());
 
         return jo;
     }
