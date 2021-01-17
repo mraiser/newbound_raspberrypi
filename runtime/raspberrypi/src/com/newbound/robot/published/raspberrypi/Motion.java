@@ -23,6 +23,7 @@ public class Motion
 {
 	BufferedImage last = null; // The last image we processed
 	JSONArray event = null; // The current motion event, if any
+	long lastwhen = 0;
 
 	int SIZEX, SIZEY, MAX; // Width, height, delta threshold
 	double FACTOR; // noise cancellation factor
@@ -33,6 +34,7 @@ public class Motion
 	int[][][] LAST, DELTA, DELTA2;
 	
 	int MAPFRAMES;
+	int PADMILLIS = 30000; // FIXME - Make configurable
 	RollingAverage[][][] MAP;
 	
 	public Motion(int width, int height, double tolerance, double noisefactor, Callback onEventBegin, Callback onEventEnd) 
@@ -136,7 +138,7 @@ public class Motion
 				}
 				event.put(jo);
 				motion = true;
-			} else if (event != null) // No motion, so conclude the current event if there is one
+			} else if (event != null && time - lastwhen > PADMILLIS) // No motion, so conclude the current event if there is one
 			{
 				JSONObject jo = new JSONObject();
 				jo.put("list", event);
@@ -148,6 +150,7 @@ public class Motion
 		catch (Exception x) { x.printStackTrace(); }
 		
 		last = next;
+		lastwhen = time;
 		
 		return motion;
 	}

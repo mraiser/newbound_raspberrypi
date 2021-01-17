@@ -897,10 +897,15 @@ public class RaspiCam
         mp4.deleteOnExit();
         FileWriter fw = new FileWriter(txt);
         long when = start;
+        File last = mp4;
         while (when < stop)
         {
             File next = jpeg(when);
-            fw.write("file '"+next.getCanonicalPath()+"'\n");
+            if (next.exists() && !next.equals(last))
+            {
+                fw.write("file '"+next.getCanonicalPath()+"'\n");
+                last = next;
+            }
             when += interval;
         }
         fw.close();
