@@ -22,6 +22,11 @@ converted
 tmp/mime
 runtime/raspberrypi/log/
 runtime/raspberrypi/botd.properties
+runtime/raspberrypi/capture/
+runtime/raspberrypi/html/
+runtime/raspberrypi/log/
+runtime/raspberrypi/archive/
+runtime/raspberrypi/raspicam.properties
 
 # IntelliJ
 out/
