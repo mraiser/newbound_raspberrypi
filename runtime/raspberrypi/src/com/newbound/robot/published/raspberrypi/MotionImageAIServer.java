@@ -1,5 +1,14 @@
 package com.newbound.robot.published.raspberrypi;
 
+/*
+Assumes https://github.com/mraiser/imageai-server is running on the network
+Add to raspicam.promerties:
+	motion-class=com.newbound.robot.published.raspberrypi.MotionImageAIServer
+If imageai-server is not on localhost:8080, add:
+	imageai-url=http://192.168.0.41:8080/upload
+(No indents)
+ */
+
 import com.newbound.net.mime.Base64Coder;
 import com.newbound.net.mime.MultipartUtility;
 import com.newbound.robot.BotUtil;
