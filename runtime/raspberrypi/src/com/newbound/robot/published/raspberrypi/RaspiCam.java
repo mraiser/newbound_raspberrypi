@@ -35,12 +35,16 @@ public class RaspiCam
     private static boolean NOTIFY = false; // Send notifications to Ninja Smoke app
     
     private static String RVC = "raspivid"; // The raspivid command. The system command line call used to start up the raspivid service. Use full path if not in system path.
+    public static boolean AUDIO = false;
+    public static String AUDIODEVICE = "default";
     private static String MOTCLASS = "com.newbound.robot.published.raspberrypi.MotionDefault";
 
     private static File CAP = null; // The directory raspivid should store captured video in
     private static File ARC = null; // The directory this service should move captured video to
     private static File HTM = null;  // The directory this service should output generated files to
-    
+    private static File AUDIOCAP = null; // The directory raspivid should store captured audio in
+    private static File AUDIOARC = null; // The directory raspivid should move captured audio to
+
     private static int WIDTH = 640; // The width of the video raspivid should capture
     private static int HEIGHT = 480; // The height of the video raspivid should capture
     private static int ROT = 0; // The number of degrees raspivid should rotate the captured video
@@ -71,6 +75,10 @@ public class RaspiCam
         else ARC = new File(rpdir, "archive");
         if (p.getProperty("html") != null) HTM = new File(p.getProperty("html"));
         else HTM = new File(rpdir, "html");
+        if (p.getProperty("audiocapture") != null) AUDIOCAP = new File(p.getProperty("audiocapture"));
+        else AUDIOCAP = new File(rpdir, "audiocapture");
+        if (p.getProperty("audioarchive") != null) AUDIOARC = new File(p.getProperty("audioarchive"));
+        else AUDIOARC = new File(rpdir, "audioarchive");
 
         OEB = onEventBegin;
         OEE = onEventEnd;
@@ -89,13 +97,20 @@ public class RaspiCam
         MOTCLASS = p.getProperty("motion-class", MOTCLASS);
         STARTRV = p.getProperty("start-raspivid", "false").equals("true");
         NOTIFY = p.getProperty("notify", "true").equals("true");
-        
+        AUDIO = p.getProperty("audio", "false").equals("true");
+        AUDIODEVICE = p.getProperty("audiodevice", AUDIODEVICE);
+
         // Create directories and delete any stale video
 //        BotUtil.deleteDir(CAP);
         CAP.mkdirs();
         ARC.mkdirs();
         HTM.mkdirs();
-        
+        if (AUDIO && RVC.equals("raspivid"))
+        {
+            AUDIOCAP.mkdirs();
+            AUDIOARC.mkdirs();
+        }
+
         if (START) // This service starting up
         {
             if (STARTMOT) // Start up motion detection
@@ -111,6 +126,13 @@ public class RaspiCam
                 {
                 	if (RVC.startsWith("ffmpeg") || RVC.equals("avfoundation")) RAW = "mp4";
                 		
+                    if (AUDIO)
+                    {
+                        String[] list = AUDIOCAP.list();
+                        int i = list.length;
+                        while (i-->0) if (list[i].endsWith(".mp3")) new File(AUDIOCAP, list[i]).delete();
+                    }
+
                     String[] list = CAP.list();
                     int i = list.length;
                     while (i-->0) if (list[i].endsWith("."+RAW)) new File(CAP, list[i]).delete(); 
@@ -125,7 +147,11 @@ public class RaspiCam
                             else if (ROT == 270) t = "transpose=2:landscape";
                         }
 //                    	cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-pix_fmt", "nv12", "-c:v", "cedrus264", "-segment_time", "2", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
-                        cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
+                        if (AUDIO)
+                            // ffmpeg -f alsa -ac 2 -i default -f v4l2 -framerate 30 -channel 0 -video_size 1920x1080 -i /dev/video0 -c:a aac -c:v libx264 -crf 22 -map 0 -segment_time 2 -g 2 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*2)" -vf transpose=none:landscape -f segment -map 0:a:0 -map 1:v:0 /home/mraiser/IdeaProjects/newbound_raspberrypi/runtime/raspberrypi/capture/%d.mp4
+                            cmd = new String[] { "ffmpeg", "-f", "alsa", "-ac", "2", "-i", "default", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:a", "aac", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", "-map", "0:a:0", "-map", "1:v:0", CAP.getCanonicalPath()+"/%d.mp4" };
+                        else
+                            cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
                     }
                     else if (RVC.equals("ffmpeg/h264_omx"))
                     {
@@ -147,6 +173,7 @@ public class RaspiCam
 	
 	                    // The full command line plus arguments to start up raspivid
 	                    cmd = new String[] { RVC, "-fps", ""+FPS, "-g", ""+g, "-sg", "1000", "-t", "0", "-rot", ""+ROT, "-w", ""+WIDTH, "-h", ""+HEIGHT, "-o", CAP.getCanonicalPath()+"/%d.264" };
+	                    if (AUDIO) launchAudioAsSeparateProcess();
                 	}
 
                     String s = "";
@@ -196,12 +223,57 @@ public class RaspiCam
             {
                 BotBase.getBot("botmanager").addPeriodicTask(killer());
                 BotBase.getBot("botmanager").addPeriodicTask(mover());
+                if (AUDIO && RVC.equals("raspivid")) BotBase.getBot("botmanager").addPeriodicTask(audiomover());
             }
         }
         ON = START;
     }
-    
-    
+
+    private static void launchAudioAsSeparateProcess() throws IOException
+    {
+        String[] cmd = { "ffmpeg", "-f", "alsa", "-ac", "2", "-i", AUDIODEVICE, "-segment_time", "2", "-f", "segment", AUDIOCAP.getCanonicalPath()+"/%d.mp3" };
+        String s = "";
+        for (int i=0;i<cmd.length;i++) s += cmd[i]+" ";
+        System.out.println(s);
+
+        RVP = Runtime.getRuntime().exec(cmd);
+
+        new Thread(new Runnable() {
+
+            @Override
+            public void run()
+            {
+                int i = 1;
+                InputStream is = RVP.getInputStream();
+                try
+                {
+                    while (i != -1)
+                    {
+                        i = is.read();
+                        System.out.print(i);
+                    }
+                }
+                catch (Exception x) { x.printStackTrace(); }
+            }
+        }).start();
+
+        new Thread(new Runnable() {
+
+            @Override
+            public void run()
+            {
+                int i = 1;
+                InputStream is = RVP.getErrorStream();
+                try
+                {
+                    while (i != -1) i = is.read();
+                }
+                catch (Exception x) { x.printStackTrace(); }
+            }
+        }).start();
+    }
+
+
     public static JSONObject settings() throws Exception // Everything you could possibly want to know about how this process is configured
     {
         JSONObject jo = new JSONObject();
@@ -512,8 +584,9 @@ public class RaspiCam
     }
 
     public static int getBacklog() { return CAP.list().length; } // Return the number of unprocessed raspivid generated video segmnents. Backlog x 2 = Approximate length of unprocessed video, which translates directly to lag when viewing in browser
-    
+
     public static File getArchived(long time, String format) { return getFile(ARC, time, format); } // Return the archived video segment of the designated format containing the designated time 
+    public static File getArchivedAudio(long time, String format) { return getFile(AUDIOARC, time, format); } // Return the archived video segment of the designated format containing the designated time
     public static File getGenerated(long time, String format) { return getFile(new File(new File(HTM, "generated"), format), time, format); } // Return the generated file of the designated format containing the designated time
 
     public static File getFile(File src, long time, String format) // Return the child of the given directory of the designated format for the designated time
@@ -600,7 +673,10 @@ public class RaspiCam
             if (RVC.equals("ffmpeg") || RVC.equals("ffmpeg/mjpeg"))
             {
                 // ffmpeg -r 30 -y -f concat -safe 0 -i segments.txt -c:v libx264 -movflags faststart segments.mp4
-                cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:v", "libx264", "-movflags", "faststart", f4.getCanonicalPath()};
+                if (AUDIO)
+                    cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:a", "copy", "-c:v", "copy", "-movflags", "faststart", f4.getCanonicalPath()};
+                else
+                    cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:v", "copy", "-movflags", "faststart", f4.getCanonicalPath()};
             }
             else
             {
@@ -619,6 +695,17 @@ public class RaspiCam
             System.out.println(s);
     
             f3.delete();
+
+            if (AUDIO && RVC.equals("raspivid"))
+            {
+                f3 = buildAudio(start, stop, "mp3");
+                File f5 = new File(f4.getParentFile(), timestamp(start)+"_"+timestamp(stop)+"_video."+format);
+                f4.renameTo(f5);
+
+                combine(f5, f3, f4);
+                f3.delete();
+                f5.delete();
+            }
         }
         
         JSONObject jo = new JSONObject();
@@ -630,6 +717,98 @@ public class RaspiCam
         catch (Exception x) { x.printStackTrace(); }
 
         return jo;
+    }
+
+    private static void combine(File video, File audio, File output) throws IOException
+    {
+        String[] cmd;
+
+        cmd = new String[]{"ffmpeg", "-y", "-i", video.getCanonicalPath(), "-i", audio.getCanonicalPath(), "-c:v", "copy", "-c:a", "copy", output.getCanonicalPath()};
+
+        String s = "";
+        for (int i = 0; i < cmd.length; i++) s += cmd[i] + " ";
+        System.out.println(s);
+
+        InputStream is = null;
+        Process proc = Runtime.getRuntime().exec(cmd);
+        String[] sa = BotUtil.systemCall(proc, is, -1);
+        s = sa[0] + "/" + sa[1];
+
+        System.out.println(s);
+
+        audio.delete();
+    }
+
+    public static File buildAudio(long start, long stop, String format) throws IOException {
+        File f4 = new File(HTM, "generated");
+        f4 = new File(f4, format);
+        f4.mkdirs();
+        f4 = new File(f4, timestamp(start) + "_" + timestamp(stop) + "." + format);
+
+        if (!f4.exists()) {
+            long time = start;
+            Calendar d = Calendar.getInstance();
+            d.setTimeInMillis(time);
+
+            File f1;
+            File f2;
+            File f3 = BotBase.newTempFile();
+            FileWriter fw = new FileWriter(f3);
+
+            double n = Math.max(30, getArchivedAudio(time, format).getParentFile().list().length);
+            System.out.println("BUILDING AUDIO FROM: " + getArchivedAudio(time, format).getParentFile());
+            int first = 1 + (int) ((n * d.get(d.SECOND)) / 60.0);
+            System.out.println("N: " + n + " / first: " + first);
+            System.out.println("time: " + time + " / stop: " + stop);
+
+            long start2 = -1;
+            long stop2 = -1;
+
+            while (time < stop) {
+                d.setTime(new Date(time));
+                f2 = getArchivedAudio(time, format).getParentFile();
+                f2.mkdirs();
+
+                int n1 = Math.max(31, f2.list().length + 1);
+                for (int i = first; i < n1; i++) {
+                    int sec = (60 * (i - 1)) / (n1 - 1);
+                    d.set(d.SECOND, sec);
+                    f1 = new File(f2, i + "." + format);
+                    System.out.println("sec: " + sec + " / file: " + f1.exists() + " " + f1);
+                    System.out.println("time: " + time + " / stop: " + stop);
+
+                    if (f1.exists()) {
+                        fw.write("file " + f1.getCanonicalPath() + "\n");
+                        stop2 = d.getTime().getTime();
+                        if (start2 == -1) start2 = stop2;
+                    }
+                    if (d.getTime().getTime() > stop) break;
+                }
+                time += 60000;
+                first = 1;
+            }
+
+            fw.close();
+
+            String[] cmd;
+
+            cmd = new String[]{"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:a", "copy", f4.getCanonicalPath()};
+
+            String s = "";
+            for (int i = 0; i < cmd.length; i++) s += cmd[i] + " ";
+            System.out.println(s);
+
+            InputStream is = null;
+            Process proc = Runtime.getRuntime().exec(cmd);
+            String[] sa = BotUtil.systemCall(proc, is, -1);
+            s = sa[0] + "/" + sa[1];
+
+            System.out.println(s);
+
+            f3.delete();
+        }
+
+        return f4;
     }
 
     public static String timestamp(long time) // Generate a timestamp in the format: YYYYMMDDhhmmss
@@ -790,7 +969,65 @@ public class RaspiCam
         
         return pt;
     }
-    
+
+    private static PeriodicTask audiomover()
+    {
+        PeriodicTask pt = new PeriodicTask(100, true, "raspicam audio file mover")
+        {
+            Calendar d = Calendar.getInstance();
+
+            public void run()
+            {
+                if (!ON) this.mRepeat = false; // Stop if this service is "OFF"
+                else while (ON && AUDIOCAP.list().length>1)
+                {
+                    int min = Integer.MAX_VALUE;
+                    int max = -1;
+
+                    String[] list = AUDIOCAP.list();
+                    int n = list.length;
+                    for (int i=0;i<n;i++) try
+                    {
+                        if (list[i].endsWith(".mp3"))
+                        {
+                            int j = Integer.parseInt(list[i].substring(0, list[i].lastIndexOf(".")));
+                            if (j<min) min = j;
+                            if (j>max) max = j;
+                        }
+                    }
+                    catch (Exception x) { x.printStackTrace(); }
+
+                    // Move 'em!
+                    int index = 0;
+                    long time = 0;
+                    File f2 = null;
+                    while (min<max) try
+                    {
+                        File f1 = new File(AUDIOCAP, min+".mp3");
+                        File f3 = new File(AUDIOCAP, (min+1)+".mp3");
+
+                        if (f1.exists() && f3.exists())
+                        {
+                            time = f1.lastModified();
+
+                            d.setTimeInMillis(time);
+                            f2 = getArchivedAudio(f1.lastModified(), "mp3").getParentFile();
+                            f2.mkdirs();
+
+                            index = f2.list().length+1;
+                            f2 = new File(f2, index+".mp3");
+                            f1.renameTo(f2);
+                        }
+                    }
+                    catch (Exception x) { x.printStackTrace(); }
+                    finally { min++; }
+                }
+            }
+        };
+
+        return pt;
+    }
+
     public static String rescan() throws Exception
     {
         File lastyear = new File(ARC, Calendar.getInstance().get(Calendar.YEAR)+"");

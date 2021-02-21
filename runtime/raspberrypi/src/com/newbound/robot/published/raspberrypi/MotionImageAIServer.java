@@ -6,7 +6,7 @@ Add to raspicam.promerties:
 	motion-class=com.newbound.robot.published.raspberrypi.MotionImageAIServer
 If imageai-server is not on localhost:8080, add:
 	imageai-url=http://192.168.0.41:8080/upload
-(No indents)
+(No indents, adjust ip & port as necessary)
  */
 
 import com.newbound.net.mime.Base64Coder;
