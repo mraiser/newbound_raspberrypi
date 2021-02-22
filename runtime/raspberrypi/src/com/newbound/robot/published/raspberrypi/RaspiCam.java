@@ -624,6 +624,7 @@ public class RaspiCam
             long time = start;
             Calendar d = Calendar.getInstance();
             d.setTimeInMillis(time);
+            long videostartmillis = -1;
     
             File f1;
             File f2;
@@ -656,9 +657,10 @@ public class RaspiCam
     
                 if (f1.exists()) 
                 {
-                  fw.write("file "+f1.getCanonicalPath()+"\n");
-                  stop2 = d.getTime().getTime();
-                  if (start2 == -1) start2 = stop2;
+                    if (videostartmillis == -1) videostartmillis = f1.lastModified();
+                    fw.write("file "+f1.getCanonicalPath()+"\n");
+                    stop2 = d.getTime().getTime();
+                    if (start2 == -1) start2 = stop2;
                 }
                 if (d.getTime().getTime()>stop) break;
               }
@@ -698,12 +700,18 @@ public class RaspiCam
 
             if (AUDIO && RVC.equals("raspivid"))
             {
-                f3 = buildAudio(start, stop, "mp3");
+                File f6 = new File(HTM, "generated");
+                f6 = new File(f6, "mp3");
+                f6.mkdirs();
+                f6 = new File(f6, timestamp(start) + "_" + timestamp(stop) + ".mp3");
+
+                long audiostartmillis = buildAudio(f6, start, stop, "mp3");
                 File f5 = new File(f4.getParentFile(), timestamp(start)+"_"+timestamp(stop)+"_video."+format);
                 f4.renameTo(f5);
 
-                combine(f5, f3, f4);
-                f3.delete();
+                long off = audiostartmillis - videostartmillis;
+                combine(f5, f6, off+500, f4);
+                f6.delete();
                 f5.delete();
             }
         }
@@ -719,11 +727,78 @@ public class RaspiCam
         return jo;
     }
 
-    private static void combine(File video, File audio, File output) throws IOException
+    private static void combine(File video, File audio, long audioOffset, File output) throws IOException
     {
+        //audioOffset
+        //        -itsoffset 00:00:00.5
+
         String[] cmd;
 
-        cmd = new String[]{"ffmpeg", "-y", "-i", video.getCanonicalPath(), "-i", audio.getCanonicalPath(), "-c:v", "copy", "-c:a", "copy", output.getCanonicalPath()};
+        cmd = new String[]{"ffmpeg", "-y", "-i", video.getCanonicalPath(), "-itsoffset", ""+((double)audioOffset/1000d), "-i", audio.getCanonicalPath(), "-c:v", "copy", "-c:a", "copy", output.getCanonicalPath()};
+
+        String s = "";
+        for (int i = 0; i < cmd.length; i++) s += cmd[i] + " ";
+        System.out.println(s);
+
+        InputStream is = null;
+        Process proc = Runtime.getRuntime().exec(cmd);
+        String[] sa = BotUtil.systemCall(proc, is, -1);
+        s = sa[0] + "/" + sa[1];
+
+        System.out.println(s);
+    }
+
+    public static long buildAudio(File f4, long start, long stop, String format) throws IOException
+    {
+        long time = start;
+        Calendar d = Calendar.getInstance();
+        d.setTimeInMillis(time);
+        long audiostartmillis = -1;
+
+        File f1;
+        File f2;
+        File f3 = BotBase.newTempFile();
+        FileWriter fw = new FileWriter(f3);
+
+        double n = Math.max(30, getArchivedAudio(time, format).getParentFile().list().length);
+        System.out.println("BUILDING AUDIO FROM: " + getArchivedAudio(time, format).getParentFile());
+        int first = 1 + (int) ((n * d.get(d.SECOND)) / 60.0);
+        System.out.println("N: " + n + " / first: " + first);
+        System.out.println("time: " + time + " / stop: " + stop);
+
+        //long start2 = -1;
+        long stop2 = -1;
+
+        while (time < stop) {
+            d.setTime(new Date(time));
+            f2 = getArchivedAudio(time, format).getParentFile();
+            f2.mkdirs();
+
+            int n1 = Math.max(31, f2.list().length + 1);
+            for (int i = first; i < n1; i++) {
+                int sec = (60 * (i - 1)) / (n1 - 1);
+                d.set(d.SECOND, sec);
+                f1 = new File(f2, i + "." + format);
+                System.out.println("sec: " + sec + " / file: " + f1.exists() + " " + f1);
+                System.out.println("time: " + time + " / stop: " + stop);
+
+                if (f1.exists()) {
+                    if (audiostartmillis == -1) audiostartmillis = f1.lastModified();
+                    fw.write("file " + f1.getCanonicalPath() + "\n");
+                    stop2 = d.getTime().getTime();
+                    //if (start2 == -1) start2 = stop2;
+                }
+                if (d.getTime().getTime() > stop) break;
+            }
+            time += 60000;
+            first = 1;
+        }
+
+        fw.close();
+
+        String[] cmd;
+
+        cmd = new String[]{"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:a", "copy", f4.getCanonicalPath()};
 
         String s = "";
         for (int i = 0; i < cmd.length; i++) s += cmd[i] + " ";
@@ -736,79 +811,9 @@ public class RaspiCam
 
         System.out.println(s);
 
-        audio.delete();
-    }
+        f3.delete();
 
-    public static File buildAudio(long start, long stop, String format) throws IOException {
-        File f4 = new File(HTM, "generated");
-        f4 = new File(f4, format);
-        f4.mkdirs();
-        f4 = new File(f4, timestamp(start) + "_" + timestamp(stop) + "." + format);
-
-        if (!f4.exists()) {
-            long time = start;
-            Calendar d = Calendar.getInstance();
-            d.setTimeInMillis(time);
-
-            File f1;
-            File f2;
-            File f3 = BotBase.newTempFile();
-            FileWriter fw = new FileWriter(f3);
-
-            double n = Math.max(30, getArchivedAudio(time, format).getParentFile().list().length);
-            System.out.println("BUILDING AUDIO FROM: " + getArchivedAudio(time, format).getParentFile());
-            int first = 1 + (int) ((n * d.get(d.SECOND)) / 60.0);
-            System.out.println("N: " + n + " / first: " + first);
-            System.out.println("time: " + time + " / stop: " + stop);
-
-            long start2 = -1;
-            long stop2 = -1;
-
-            while (time < stop) {
-                d.setTime(new Date(time));
-                f2 = getArchivedAudio(time, format).getParentFile();
-                f2.mkdirs();
-
-                int n1 = Math.max(31, f2.list().length + 1);
-                for (int i = first; i < n1; i++) {
-                    int sec = (60 * (i - 1)) / (n1 - 1);
-                    d.set(d.SECOND, sec);
-                    f1 = new File(f2, i + "." + format);
-                    System.out.println("sec: " + sec + " / file: " + f1.exists() + " " + f1);
-                    System.out.println("time: " + time + " / stop: " + stop);
-
-                    if (f1.exists()) {
-                        fw.write("file " + f1.getCanonicalPath() + "\n");
-                        stop2 = d.getTime().getTime();
-                        if (start2 == -1) start2 = stop2;
-                    }
-                    if (d.getTime().getTime() > stop) break;
-                }
-                time += 60000;
-                first = 1;
-            }
-
-            fw.close();
-
-            String[] cmd;
-
-            cmd = new String[]{"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:a", "copy", f4.getCanonicalPath()};
-
-            String s = "";
-            for (int i = 0; i < cmd.length; i++) s += cmd[i] + " ";
-            System.out.println(s);
-
-            InputStream is = null;
-            Process proc = Runtime.getRuntime().exec(cmd);
-            String[] sa = BotUtil.systemCall(proc, is, -1);
-            s = sa[0] + "/" + sa[1];
-
-            System.out.println(s);
-
-            f3.delete();
-        }
-
-        return f4;
+        return audiostartmillis;
     }
 
     public static String timestamp(long time) // Generate a timestamp in the format: YYYYMMDDhhmmss
