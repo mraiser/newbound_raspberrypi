@@ -23,9 +23,11 @@ tmp/mime
 runtime/raspberrypi/log/
 runtime/raspberrypi/botd.properties
 runtime/raspberrypi/capture/
+runtime/raspberrypi/audiocapture/
 runtime/raspberrypi/html/
 runtime/raspberrypi/log/
 runtime/raspberrypi/archive/
+runtime/raspberrypi/audioarchive/
 runtime/raspberrypi/raspicam.properties
 
 # IntelliJ

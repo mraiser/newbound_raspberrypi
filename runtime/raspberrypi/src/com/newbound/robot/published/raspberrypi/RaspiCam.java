@@ -14,6 +14,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
@@ -120,104 +122,7 @@ public class RaspiCam
                 MOT.init(p, onEventBegin(), onEventEnd());
             }           
                 
-            if (STARTRV) // Start the raspivid system process
-            {
-                try
-                {
-                	if (RVC.startsWith("ffmpeg") || RVC.equals("avfoundation")) RAW = "mp4";
-                		
-                    if (AUDIO)
-                    {
-                        String[] list = AUDIOCAP.list();
-                        int i = list.length;
-                        while (i-->0) if (list[i].endsWith(".mp3")) new File(AUDIOCAP, list[i]).delete();
-                    }
-
-                    String[] list = CAP.list();
-                    int i = list.length;
-                    while (i-->0) if (list[i].endsWith("."+RAW)) new File(CAP, list[i]).delete(); 
-
-                	String[] cmd;
-                    if (RVC.equals("ffmpeg"))
-                    {
-                        String t = "transpose=none:landscape";
-                        if (ROT != 0){
-                            if (ROT == 90) t = "transpose=1:landscape";
-                            else if (ROT == 180) t = "transpose=2,transpose=2:landscape";
-                            else if (ROT == 270) t = "transpose=2:landscape";
-                        }
-//                    	cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-pix_fmt", "nv12", "-c:v", "cedrus264", "-segment_time", "2", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
-                        if (AUDIO)
-                            // ffmpeg -f alsa -ac 2 -i default -f v4l2 -framerate 30 -channel 0 -video_size 1920x1080 -i /dev/video0 -c:a aac -c:v libx264 -crf 22 -map 0 -segment_time 2 -g 2 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*2)" -vf transpose=none:landscape -f segment -map 0:a:0 -map 1:v:0 /home/mraiser/IdeaProjects/newbound_raspberrypi/runtime/raspberrypi/capture/%d.mp4
-                            cmd = new String[] { "ffmpeg", "-f", "alsa", "-ac", "2", "-i", "default", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:a", "aac", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", "-map", "0:a:0", "-map", "1:v:0", CAP.getCanonicalPath()+"/%d.mp4" };
-                        else
-                            cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
-                    }
-                    else if (RVC.equals("ffmpeg/h264_omx"))
-                    {
-                        // ffmpeg -f v4l2 -c:v mjpeg -i /dev/video0 -c:v copy -segment_time 2 -g 2 -sc_threshold 0 -f segment /root/Newbound/runtime/raspberrypi/capture/%d.mp4
-                        cmd = new String[] { "ffmpeg", "-f", "v4l2", "-c:v", "mjpeg", "-i", "/dev/video0", "-c:v", "h264_omx", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
-                    }
-                    else if (RVC.equals("ffmpeg/mjpeg"))
-                	{
-                	    // ffmpeg -f v4l2 -c:v mjpeg -i /dev/video0 -c:v copy -segment_time 2 -g 2 -sc_threshold 0 -f segment /root/Newbound/runtime/raspberrypi/capture/%d.mp4
-                    	cmd = new String[] { "ffmpeg", "-f", "v4l2", "-c:v", "mjpeg", "-i", "/dev/video0", "-c:v", "copy", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
-                	}
-                	else if (RVC.equals("avfoundation"))
-                	{
-                    	cmd = new String[] { "ffmpeg", "-f", "avfoundation", "-framerate", ""+FPS, "-video_size", WIDTH+"x"+HEIGHT, "-i", "0:0", "-vf", "rotate=\""+ROT+"*(PI/180)\"", "-pix_fmt", "nv12", "-segment_time", "2", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
-                	}
-                	else
-                	{
-	                    int g = (FPS-1)*2; // Forces raspivid generated video segments to be as close to two seconds as possible. Because FPS/2 with a "-sg 2000" in the command line didn't seem to work right. YMMV.
-	
-	                    // The full command line plus arguments to start up raspivid
-	                    cmd = new String[] { RVC, "-fps", ""+FPS, "-g", ""+g, "-sg", "1000", "-t", "0", "-rot", ""+ROT, "-w", ""+WIDTH, "-h", ""+HEIGHT, "-o", CAP.getCanonicalPath()+"/%d.264" };
-	                    if (AUDIO) launchAudioAsSeparateProcess();
-                	}
-
-                    String s = "";
-                    for (i=0;i<cmd.length;i++) s += cmd[i]+" ";
-                    System.out.println(s);
-                      
-                    RVP = Runtime.getRuntime().exec(cmd);
-                    
-                    new Thread(new Runnable() {
-						
-						@Override
-						public void run() 
-						{
-							int i = 1;
-							InputStream is = RVP.getInputStream();
-							try
-							{
-								while (i != -1) 
-								{
-									i = is.read();
-									System.out.print(i);
-								}
-							}
-							catch (Exception x) { x.printStackTrace(); }
-						}
-					}).start();
-                    
-                    new Thread(new Runnable() {
-						
-						@Override
-						public void run() 
-						{
-							int i = 1;
-							InputStream is = RVP.getErrorStream();
-							try
-							{
-								while (i != -1) i = is.read(); 
-							}
-							catch (Exception x) { x.printStackTrace(); }
-						}
-					}).start();
-                }
-                catch (Exception x) { x.printStackTrace(); }
-            }
+            if (STARTRV) startRVP(); // Start the raspivid system process
 
             if (!ON) // Because we don't turn "OFF" on restart and we don't want multiples
             {
@@ -228,6 +133,139 @@ public class RaspiCam
         }
         ON = START;
     }
+
+    private static void startRVP() {
+        lastmove = System.currentTimeMillis();
+        try
+        {
+            if (RVP != null && isAlive(RVP)) RVP.destroy();
+
+            if (RVC.startsWith("ffmpeg") || RVC.equals("avfoundation")) RAW = "mp4";
+
+            if (AUDIO)
+            {
+                String[] list = AUDIOCAP.list();
+                int i = list.length;
+                while (i-->0) if (list[i].endsWith(".mp3")) new File(AUDIOCAP, list[i]).delete();
+            }
+
+            String[] list = CAP.list();
+            int i = list.length;
+            while (i-->0) if (list[i].endsWith("."+RAW)) new File(CAP, list[i]).delete();
+
+            String[] cmd;
+            if (RVC.equals("ffmpeg"))
+            {
+                String t = "transpose=none:landscape";
+                if (ROT != 0){
+                    if (ROT == 90) t = "transpose=1:landscape";
+                    else if (ROT == 180) t = "transpose=2,transpose=2:landscape";
+                    else if (ROT == 270) t = "transpose=2:landscape";
+                }
+//                    	cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-pix_fmt", "nv12", "-c:v", "cedrus264", "-segment_time", "2", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
+                if (AUDIO)
+                    // ffmpeg -f alsa -ac 2 -i default -f v4l2 -framerate 30 -channel 0 -video_size 1920x1080 -i /dev/video0 -c:a aac -c:v libx264 -crf 22 -map 0 -segment_time 2 -g 2 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*2)" -vf transpose=none:landscape -f segment -map 0:a:0 -map 1:v:0 /home/mraiser/IdeaProjects/newbound_raspberrypi/runtime/raspberrypi/capture/%d.mp4
+                    cmd = new String[] { "ffmpeg", "-f", "alsa", "-ac", "2", "-i", "default", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:a", "aac", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", "-map", "0:a:0", "-map", "1:v:0", CAP.getCanonicalPath()+"/%d.mp4" };
+                else
+                    cmd = new String[] { "ffmpeg", "-f", "v4l2", "-framerate", ""+FPS, "-channel", "0", "-video_size", WIDTH+"x"+HEIGHT, "-i", "/dev/video0", "-c:v", "libx264", "-crf", "22", "-map", "0", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-force_key_frames", "expr:gte(t,n_forced*2)", "-vf", t, "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
+            }
+            else if (RVC.equals("ffmpeg/h264_omx"))
+            {
+                // ffmpeg -f v4l2 -c:v mjpeg -i /dev/video0 -c:v copy -segment_time 2 -g 2 -sc_threshold 0 -f segment /root/Newbound/runtime/raspberrypi/capture/%d.mp4
+                cmd = new String[] { "ffmpeg", "-f", "v4l2", "-c:v", "mjpeg", "-i", "/dev/video0", "-c:v", "h264_omx", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
+            }
+            else if (RVC.equals("ffmpeg/mjpeg"))
+            {
+                // ffmpeg -f v4l2 -c:v mjpeg -i /dev/video0 -c:v copy -segment_time 2 -g 2 -sc_threshold 0 -f segment /root/Newbound/runtime/raspberrypi/capture/%d.mp4
+                cmd = new String[] { "ffmpeg", "-f", "v4l2", "-c:v", "mjpeg", "-i", "/dev/video0", "-c:v", "copy", "-segment_time", "2", "-g", "2", "-sc_threshold", "0", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
+            }
+            else if (RVC.equals("avfoundation"))
+            {
+                cmd = new String[] { "ffmpeg", "-f", "avfoundation", "-framerate", ""+FPS, "-video_size", WIDTH+"x"+HEIGHT, "-i", "0:0", "-vf", "rotate=\""+ROT+"*(PI/180)\"", "-pix_fmt", "nv12", "-segment_time", "2", "-f", "segment", CAP.getCanonicalPath()+"/%d.mp4" };
+            }
+            else
+            {
+                int g = (FPS-1)*2; // Forces raspivid generated video segments to be as close to two seconds as possible. Because FPS/2 with a "-sg 2000" in the command line didn't seem to work right. YMMV.
+
+                // The full command line plus arguments to start up raspivid
+                cmd = new String[] { RVC, "-fps", ""+FPS, "-g", ""+g, "-sg", "1000", "-t", "0", "-rot", ""+ROT, "-w", ""+WIDTH, "-h", ""+HEIGHT, "-o", CAP.getCanonicalPath()+"/%d.264" };
+                if (AUDIO) launchAudioAsSeparateProcess();
+            }
+
+            String s = "";
+            for (i=0;i<cmd.length;i++) s += cmd[i]+" ";
+            System.out.println(s);
+
+            RVP = Runtime.getRuntime().exec(cmd);
+
+            new Thread(new Runnable() {
+
+                @Override
+                public void run()
+                {
+                    File f = new File(BotBase.getBot("raspberrypi").getRootDir(), "camera_exit_a");
+                    //f.delete();
+                    String reason = "UNKNOWN";
+
+                    int i = 1;
+                    InputStream is = RVP.getInputStream();
+                    try
+                    {
+                        while (i != -1)
+                        {
+                            i = is.read();
+                            System.out.print(i);
+                        }
+                    }
+                    catch (Exception x) {
+                        x.printStackTrace();
+                        reason = x.getMessage();
+                    }
+                    finally {
+                        try { BotUtil.writeFile(f, ("EXIT "+reason+" "+new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date())+"\n").getBytes(), true); }
+                        catch (Exception y) { y.printStackTrace(); }
+                    }
+                }
+            }).start();
+
+            new Thread(new Runnable() {
+
+                @Override
+                public void run()
+                {
+                    File f = new File(BotBase.getBot("raspberrypi").getRootDir(), "camera_exit_b");
+                    //f.delete();
+                    String reason = "UNKNOWN";
+
+                    int i = 1;
+                    InputStream is = RVP.getErrorStream();
+                    try
+                    {
+                        while (i != -1) i = is.read();
+                    }
+                    catch (Exception x) {
+                        x.printStackTrace();
+                        reason = x.getMessage();
+                    }
+                    finally {
+                        try { BotUtil.writeFile(f, ("EXIT "+reason+" "+new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date())+"\n").getBytes(), true); }
+                        catch (Exception y) { y.printStackTrace(); }
+                    }
+                }
+            }).start();
+        }
+        catch (Exception x) { x.printStackTrace(); }
+    }
+
+    private static boolean isAlive(Process rvp) {
+        try {
+            rvp.exitValue();
+            return false;
+        } catch(IllegalThreadStateException e) {
+            return true;
+        }
+    }
+
 
     private static void launchAudioAsSeparateProcess() throws IOException
     {
@@ -856,10 +894,13 @@ public class RaspiCam
 
     }
                     
-    // Keep moving files from captured to archived until there are no more files to move. Then rest for a second and do it again. This could probably be tweaked for better performance. YMMV.
+    // Keep moving files from captured to archived until there are no more files to move. Then rest for 0.1 seconds and do it again. This could probably be tweaked for better performance. YMMV.
     // Also, generate snapshots and check for motion if it's time to do so.
-    private static PeriodicTask mover() 
+    private static long lastmove = 0;
+    private static PeriodicTask mover()
     {
+        lastmove = System.currentTimeMillis();
+
         PeriodicTask pt = new PeriodicTask(100, true, "raspicam file mover") 
         {
             Calendar d = Calendar.getInstance();
@@ -867,6 +908,14 @@ public class RaspiCam
             public void run() 
             {
                 if (!ON) this.mRepeat = false; // Stop if this service is "OFF"
+                else if (System.currentTimeMillis() - lastmove > 60000) {
+                    //startRVP(); // Sometimes the camera just stops. Restart it
+                    lastmove = System.currentTimeMillis();
+                    BotBase.getBot("raspberrypi").fireEvent("CAMERA_DIED", new JSONObject());
+                    File f = new File(BotBase.getBot("raspberrypi").getRootDir(), "camera_exit_c");
+                    try { BotUtil.writeFile(f, ("EXIT "+new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date())+"\n").getBytes(), true); }
+                    catch (Exception y) { y.printStackTrace(); }
+                }
                 else while (ON && CAP.list().length>1)
                 {
                     // Find the first video and last videos to move. This could be eliminated if your filesystem is guaranteed to return files in the order they were generated
@@ -932,6 +981,7 @@ public class RaspiCam
                         else 
 */
                         	f1.renameTo(f2);
+                            lastmove = System.currentTimeMillis();
                       }
                     }
                     catch (Exception x) { x.printStackTrace(); }
@@ -1157,8 +1207,9 @@ public class RaspiCam
         }
         fw.close();
 
-        // ffmpeg -f image2pipe -framerate 30 -i - -s 640x480 timelapse.mp4
-        String[] cmd = { "ffmpeg", "-f", "concat", "-safe", "0", "-i", txt.getCanonicalPath(), "-s", "640x480", "-framerate", ""+fps, mp4.getCanonicalPath() };
+        // ffmpeg -f image2pipe -framerate 30 -i - -s 640x480 timelapse.
+        // FIXME - file is too big at 1080p
+        String[] cmd = { "ffmpeg", "-f", "concat", "-safe", "0", "-i", txt.getCanonicalPath(), "-s", WIDTH+"x"+HEIGHT, "-framerate", ""+fps, mp4.getCanonicalPath() };
         String s = "";
         for (int i=0;i<cmd.length;i++) s += cmd[i]+" ";
         System.out.println(s);
