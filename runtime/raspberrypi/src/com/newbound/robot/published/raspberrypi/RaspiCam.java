@@ -1184,7 +1184,12 @@ public class RaspiCam
       if (!f.equals(root) && f.list().length == 0) BotUtil.deleteDir(f);
     }
 
-    public static JSONObject timelapse(Long start, Long stop, Long interval, int fps) throws Exception {
+    public static JSONObject timelapse(Long start, Long stop, Long interval, int fps) throws Exception
+    {
+        return timelapse(start,stop,interval,fps,WIDTH+"x"+HEIGHT);
+    }
+
+    public static JSONObject timelapse(Long start, Long stop, Long interval, int fps, String resolution) throws Exception {
         String name = start+"_"+stop+"_"+interval+"_"+fps;
 //        File p = getGenerated(start, "timelapse").getParentFile();
 //        File txt = new File(p, name+".txt");
@@ -1209,7 +1214,7 @@ public class RaspiCam
 
         // ffmpeg -f image2pipe -framerate 30 -i - -s 640x480 timelapse.
         // FIXME - file is too big at 1080p
-        String[] cmd = { "ffmpeg", "-f", "concat", "-safe", "0", "-i", txt.getCanonicalPath(), "-s", WIDTH+"x"+HEIGHT, "-framerate", ""+fps, mp4.getCanonicalPath() };
+        String[] cmd = { "ffmpeg", "-f", "concat", "-safe", "0", "-i", txt.getCanonicalPath(), "-s", resolution, "-framerate", ""+fps, mp4.getCanonicalPath() };
         String s = "";
         for (int i=0;i<cmd.length;i++) s += cmd[i]+" ";
         System.out.println(s);
