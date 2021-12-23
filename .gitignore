@@ -29,6 +29,7 @@ runtime/raspberrypi/log/
 runtime/raspberrypi/archive/
 runtime/raspberrypi/audioarchive/
 runtime/raspberrypi/raspicam.properties
+data/raspberrypi/version.txt
 
 # IntelliJ
 out/
