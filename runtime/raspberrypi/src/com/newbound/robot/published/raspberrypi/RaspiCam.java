@@ -154,7 +154,17 @@ public class RaspiCam
             while (i-->0) if (list[i].endsWith("."+RAW)) new File(CAP, list[i]).delete();
 
             String[] cmd;
-            if (RVC.equals("ffmpeg"))
+            if (RVC.equals("libcamera-vid"))
+            {
+                int width = ROT == 90 || ROT == 270 ? HEIGHT : WIDTH;
+                int height = ROT == 90 || ROT == 270 ? WIDTH : HEIGHT;
+
+                // HACK - Convert FPS to BPS
+                long b = Math.round((0.3*FPS + 1.0)*1000000.0);
+
+                cmd = new String[] { RVC, "--segment", "2000", "--nopreview", "--inline", "-t", "0", "--width",  ""+width, "--height", ""+height, "-b", ""+b, "-o", CAP.getCanonicalPath()+"/%d.264" };
+            }
+            else if (RVC.equals("ffmpeg"))
             {
                 String t = "transpose=none:landscape";
                 if (ROT != 0){
@@ -718,6 +728,24 @@ public class RaspiCam
                 else
                     cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c:v", "copy", "-movflags", "faststart", f4.getCanonicalPath()};
             }
+            else if (RVC.equals("libcamera-vid"))
+            {
+                if (ROT == 90) {
+//                    cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-vf", "transpose=1", "-movflags", "faststart", f4.getCanonicalPath()};
+                    cmd = new String[] {"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-metadata:s:v:0", "rotate=270", "-c", "copy", f4.getCanonicalPath()};
+                }
+                else if (ROT == 180) {
+//                    cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-vf", "transpose=2,transpose=2", "-movflags", "faststart", f4.getCanonicalPath()};
+                    cmd = new String[] {"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-metadata:s:v:0", "rotate=180", "-c", "copy", f4.getCanonicalPath()};
+                }
+                else if (ROT == 270) {
+//                    cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-vf", "transpose=2", "-movflags", "faststart", f4.getCanonicalPath()};
+                    cmd = new String[] {"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-metadata:s:v:0", "rotate=90", "-c", "copy", f4.getCanonicalPath()};
+                }
+                else {
+                    cmd = new String[] {"ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c", "copy", f4.getCanonicalPath()};
+                }
+            }
             else
             {
             	cmd = new String[] {"ffmpeg", "-r", ""+FPS, "-y", "-f", "concat", "-safe", "0", "-i", f3.getCanonicalPath(), "-c", "copy", "-movflags", "faststart", f4.getCanonicalPath()};
@@ -989,7 +1017,22 @@ public class RaspiCam
                     
                     if (f4 != null) try
                     {
-                      String[] cmd = {"ffmpeg", "-y", "-i", f2.getCanonicalPath(), "-vframes", "1", "-s", WIDTH+"x"+HEIGHT, "-f", "image2", f4.getCanonicalPath()};
+                      String[] cmd;
+                      if (RVC.equals("libcamera-vid")) {
+                          if (ROT == 90) {
+                              cmd = new String[]{"ffmpeg", "-y", "-i", f2.getCanonicalPath(), "-vframes", "1", "-s", WIDTH + "x" + HEIGHT, "-vf", "transpose=1", f4.getCanonicalPath()};
+                          }
+                          else if (ROT == 180) {
+                              cmd = new String[]{"ffmpeg", "-y", "-i", f2.getCanonicalPath(), "-vframes", "1", "-s", WIDTH + "x" + HEIGHT, "-vf", "transpose=2,transpose=2", f4.getCanonicalPath()};
+                          }
+                          else if (ROT == 270) {
+                              cmd = new String[]{"ffmpeg", "-y", "-i", f2.getCanonicalPath(), "-vframes", "1", "-s", WIDTH + "x" + HEIGHT, "-vf", "transpose=2", f4.getCanonicalPath()};
+                          }
+                          else
+                              cmd = new String[] {"ffmpeg", "-y", "-i", f2.getCanonicalPath(), "-vframes", "1", "-s", WIDTH+"x"+HEIGHT, "-f", "image2", f4.getCanonicalPath()};
+                      }
+                      else
+                          cmd = new String[] {"ffmpeg", "-y", "-i", f2.getCanonicalPath(), "-vframes", "1", "-s", WIDTH+"x"+HEIGHT, "-f", "image2", f4.getCanonicalPath()};
 
                       String s = "";
                       for (int i=0;i<cmd.length;i++) s += cmd[i]+" ";

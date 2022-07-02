@@ -1,0 +1,24 @@
+.if-start, .if-mot-start{
+  display:none;
+  margin:10px;
+}
+
+.if-start-sel,.if-mot-start-sel{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:left;
+}
+
+.shortselect{
+  width:70px;
+  margin:10px;
+}
+
+.longselect{
+  width:300px;
+  margin-bottom:20px;
+}
+
+.if-mot-start-slide{
+  margin-top:-20px;
+}

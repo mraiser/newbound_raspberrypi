@@ -1,0 +1,69 @@
+<div class='dvrwrap color-primary-dark'>
+  <div class='mediagoeshere'></div>
+  <div class = "mdl-tabs mdl-js-tabs">
+    <div class = "mdl-tabs__tab-bar navbar-dark">
+      <a href = "#tab1-panel" class = "navbar-tab livetab tab3 mdl-tabs__tab is-active selected" data-id="tab1-panel">Live</a>
+      <a href = "#tab2-panel" class = "navbar-tab dvrtab tab3 mdl-tabs__tab" data-id="tab2-panel">DVR</a>
+      <a href = "#tab3-panel" class = "navbar-tab eventstab tab3 mdl-tabs__tab" data-id="tab3-panel">Events</a>
+    </div>
+
+    <div class = "mdl-tabs__panel is-active tab-content tab1-panel selected" id = "tab1-panel">
+    </div>
+
+    <div class = "mdl-tabs__panel tab-content tab2-panel" id = "tab2-panel">
+      <table border='0' cellpadding='0' cellspacing='20' width='100%' class='rvctable'>
+        <tr>
+          <td colspan="2">
+            <div class='thumbsliderwrap'>
+              <div class='thumbslider'></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td width='140px'>Duration: <span class='durationslidervalue'>0:05</span></td>
+          <td class='rv-durationslider'>
+            <input class="plainslider mdl-slider mdl-js-slider durationslider" type="range"
+  min="5" max="300" value="5" tabindex="0">
+          </td>
+        </tr>
+        <tr>
+          <td width='140px'>Date/Time:</td>
+          <td class='rv-whenslider'>
+            <input class="plainslider mdl-slider mdl-js-slider datetimeslider" type="range"
+  min="0" max="100" value="100" tabindex="0">
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <div class='dvryearselect timeselect'></div>
+            <div class='dvrmonthselect timeselect'></div>
+            <div class='dvrdateselect timeselect'></div>
+            <div class='dvrhourselect timeselect'></div>:&nbsp;&nbsp;
+            <div class='dvrminselect timeselect'></div>:&nbsp;&nbsp;
+            <div class='dvrsecselect timeselect'></div>
+            
+<button class="coloredbutton mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored floatrightbutton dvrplaybutton">
+  <img src="../botmanager/asset/botmanager/play_icon.png" class="mediumicon">
+</button>
+<button class="coloredbutton mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored floatrightbutton dvrdownloadbutton">
+  <img src="../botmanager/asset/botmanager/download_icon.png" class="mediumicon">
+</button>            
+            
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class = "mdl-tabs__panel tab-content tab3-panel" id = "tab3-panel">
+      <table border='0' cellpadding='0' cellspacing='20' width='100%' class='rvctable'>
+        <tr>
+          <td colspan="2">
+            <div class='eventsliderwrap'>
+              <div class='eventslider'></div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
