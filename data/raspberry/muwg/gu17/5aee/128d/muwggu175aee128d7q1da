@@ -1,1 +1,0 @@
-{"data":{"import":"import org.json.*;\nimport com.newbound.robot.*;\n","lib":"raspberrypi","returntype":"String","groups":"trusted","ctl":"temp","cmd":"temp","type":"java","params":[],"attachmentkeynames":["java"],"desc":""},"readers":["trusted"],"id":"muwggu175aee128d7q1da","time":1655996008338,"addr":"/0:0:0:0:0:0:0:1:37744","username":"admin"}

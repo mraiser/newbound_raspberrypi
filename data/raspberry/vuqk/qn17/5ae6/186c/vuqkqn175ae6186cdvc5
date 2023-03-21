@@ -1,1 +1,0 @@
-{"data":{"java":"return RaspiCam.info();","import":"import org.json.*;\nimport com.newbound.robot.*;\n","returntype":"JSONObject","groups":"camera","params":[],"desc":""},"readers":["camera"],"id":"vuqkqn175ae6186cdvc5","time":1604948861473,"addr":"/0:0:0:0:0:0:0:1:54798","username":"admin"}

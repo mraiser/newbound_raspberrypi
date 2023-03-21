@@ -1,0 +1,1 @@
+{"data":{"attachmentkeynames":["rs"],"cmd":"list_available","ctl":"apt","desc":"","import":"use ndata::dataarray::DataArray;\nuse flowlang::flowlang::system::system_call::system_call;\n","lib":"raspberry","params":[],"returntype":"JSONObject","type":"rust"},"id":"kpturq185d21bef9dt22","readers":[],"time":1674267391823,"username":"system","writers":[]}
