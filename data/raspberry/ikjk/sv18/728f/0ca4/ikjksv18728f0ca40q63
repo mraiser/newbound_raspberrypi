@@ -1,0 +1,1 @@
+{"data":{"attachmentkeynames":["rs"],"cmd":"arch","ctl":"raspberry","desc":"","import":"use std::process::Command;\nuse std::process::Stdio;\n","lib":"raspberry","params":[],"returntype":"String","type":"rust"},"id":"ikjksv18728f0ca40q63","readers":[],"time":1680019656271,"username":"system","writers":[]}

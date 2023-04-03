@@ -1,0 +1,1 @@
+{"data":{"attachmentkeynames":["rs"],"cmd":"os","ctl":"raspberry","desc":"","import":"use std::path::Path;\nuse flowlang::flowlang::file::read_properties::read_properties;\n","lib":"raspberry","params":[],"returntype":"JSONObject","type":"rust"},"id":"xijrwh18728e08d92l3d5","readers":[],"time":1680018163105,"username":"system","writers":[]}

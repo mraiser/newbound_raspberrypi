@@ -10,16 +10,15 @@ if (ME.DATA.peer && ME.DATA.peer != 'local') {
 else me.prefix = '../';
 
 me.ready = function(){
-  componentHandler.upgradeAllRegistered();
-
   json(me.prefix+'raspberry/temp', null, function(result){
     var tempc = result.data.temp_c;
     var tempf = result.data.temp_f;
+    var v = tempf.toFixed ? tempf.toFixed(1) : "--";
     
     var title = ME.DATA.title ? ME.DATA.title : "CPU Temp";
     ME.DATA.title = title;
     var d = {
-      value: tempf.toFixed(1),
+      value: v,
       units: "f",
       title: title,
       range: [-30,130]
@@ -40,12 +39,15 @@ function updateDial(el){
     var d = el.data("data");
     var api = el[0].api;
     json(me.prefix+'raspberry/temp', null, function(result){
-      var i = result.msg.indexOf('=');
-      var x = result.msg.indexOf("'");
-      var tempc = Number(result.msg.substring(i+1,x));
-      var tempf = (tempc * 9/5) + 32;
-
-      api.update(tempf.toFixed(1));
+      var v = "--";
+      if (result.msg) {
+        var i = result.msg.indexOf('=');
+        var x = result.msg.indexOf("'");
+        var tempc = Number(result.msg.substring(i+1,x));
+        var tempf = (tempc * 9/5) + 32;
+        v = tempf.toFixed(1);
+      }
+      api.update(v);
       setTimeout(function(){
         updateDial(el);
       }, 3000);
